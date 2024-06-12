@@ -1,0 +1,16 @@
+{
+  "name": "C216-L1-GEC1648_ProjetoPratico",
+  "version": "1.0.0",
+  "description": "Sistema para gerenciamento de reservas de um hotel",
+  "main": "index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "Não há testes configurados"
+  },
+  "dependencies": {
+    "restify": "^8.5.1",
+    "pg": "^8.11.5"
+  },
+  "author": "Daiane Dionisio de Lima - 1648",
+  "license": "ISC"
+}
