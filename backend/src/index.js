@@ -5,7 +5,7 @@ const { Pool } = require('pg');
 const pool = new Pool({
     user: process.env.POSTGRES_USER || 'postgres', // Usuário do banco de dados
     host: process.env.POSTGRES_HOST || 'db', // Este é o nome do serviço do banco de dados no Docker Compose
-    database: process.env.POSTGRES_DB || 'professores',
+    database: process.env.POSTGRES_DB || 'reservas',
     password: process.env.POSTGRES_PASSWORD || 'password', // Senha do banco de dados
     port: process.env.POSTGRES_PORT || 5432,
 });
@@ -24,7 +24,25 @@ var server = restify.createServer({
 async function initDatabase() {
     try {
         await pool.query('DROP TABLE IF EXISTS reservas');
-        await pool.query('CREATE TABLE IF NOT EXISTS reservas (id SERIAL PRIMARY KEY, nomehospede VARCHAR(255) NOT NULL, dataentrada DATE NOT NULL, datasaida DATE NOT NULL, numeroquarto INT NOT NULL)');
+        await pool.query('DROP TABLE IF EXISTS quartos');
+        
+        await pool.query('CREATE TABLE IF NOT EXISTS reservas (id SERIAL PRIMARY KEY, nome_hospede VARCHAR(255) NOT NULL, cpf_hospede VARCHAR(255) NOT NULL, num_hospedes VARCHAR(255) NOT NULL, data_entrada DATE NOT NULL, data_saida DATE NOT NULL, numero_quarto VARCHAR(255) NOT NULL)');
+        await pool.query('CREATE TABLE IF NOT EXISTS quartos (id SERIAL PRIMARY KEY, numero_quarto VARCHAR(255) NOT NULL, num_max_hospedes VARCHAR(255) NOT NULL)');
+        
+        await pool.query(`
+            INSERT INTO quartos (numero_quarto, num_max_hospedes)
+            VALUES 
+            ('101A', '2'),
+            ('102A', '2'),
+            ('103A', '2'),
+            ('201A', '3'),
+            ('202A', '3'),
+            ('203A', '4'),
+            ('301A', '4'),
+            ('302A', '4'),
+            ('303A', '4')
+        `);
+
         console.log('Banco de dados inicializado com sucesso');
     } catch (error) {
         console.error('Erro ao iniciar o banco de dados, tentando novamente em 5 segundos:', error);
@@ -35,13 +53,13 @@ async function initDatabase() {
 // Middleware para permitir o parsing do corpo da requisição
 server.use(restify.plugins.bodyParser());
 
-server.post('/api/v1/reserva/cadastrar', async (req, res, next) => {
-    const { nomehospede, dataentrada, datasaida, numeroquarto } = req.body;
+server.post('/api/v1/reserva/cadastrarReserva', async (req, res, next) => {
+    const { nome_hospede, cpf_hospede, num_hospedes, data_entrada, data_saida, numero_quarto } = req.body;
 
     try {
         const result = await pool.query(
-          'INSERT INTO reservas (nomehospede, dataentrada, datasaida, numeroquarto) VALUES ($1, $2, $3, $4) RETURNING *',
-          [nomehospede, dataentrada, datasaida, numeroquarto]
+          'INSERT INTO reservas (nome_hospede, cpf_hospede, num_hospedes, data_entrada, data_saida, numero_quarto) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+          [nome_hospede, cpf_hospede, num_hospedes, data_entrada, data_saida, numero_quarto]
         );
         res.send(201, result.rows[0]);
         console.log('Reserva cadastrada com sucesso:', result.rows[0]);
@@ -53,7 +71,7 @@ server.post('/api/v1/reserva/cadastrar', async (req, res, next) => {
     return next();
 });
 
-server.get('/api/v1/reserva/listar', async  (req, res, next) => {
+server.get('/api/v1/reserva/listarReservas', async  (req, res, next) => {
     try {
         const result = await pool.query('SELECT * FROM reservas');
         res.send(result.rows);
@@ -66,13 +84,13 @@ server.get('/api/v1/reserva/listar', async  (req, res, next) => {
       return next();
 });
 
-server.post('/api/v1/reserva/atualizar', async (req, res, next) => {
-    const { nomehospede, dataentrada, datasaida, numeroquarto, id } = req.body;
+server.post('/api/v1/reserva/atualizarReserva', async (req, res, next) => {
+    const { nome_hospede, cpf_hospede, num_hospedes, data_entrada, data_saida, numero_quarto, id } = req.body;
 
     try {
         const result = await pool.query(
-          'UPDATE reservas SET nomehospede = $1, dataentrada = $2, datasaida = $3, numeroquarto = $4 WHERE id = $5 RETURNING *',
-          [nomehospede, dataentrada, datasaida, numeroquarto, id]
+          'UPDATE reservas SET nome_hospede = $1, cpf_hospede = $2, num_hospedes = $3, data_entrada = $4, data_saida = $5, numero_quarto = $6 WHERE id = $7 RETURNING *',
+          [nome_hospede, cpf_hospede, num_hospedes, data_entrada, data_saida, numero_quarto, id]
         );
         if (result.rowCount === 0) {
           res.send(404, { message: 'Reserva não encontrada' });
@@ -88,7 +106,7 @@ server.post('/api/v1/reserva/atualizar', async (req, res, next) => {
     return next();
 });
 
-server.post('/api/v1/reserva/excluir', async (req, res, next) => {
+server.post('/api/v1/reserva/excluirReserva', async (req, res, next) => {
     const { id } = req.body;
 
     try {
@@ -107,11 +125,139 @@ server.post('/api/v1/reserva/excluir', async (req, res, next) => {
     return next();
 });
 
+server.post('/api/v1/quarto/registrarQuarto', async (req, res, next) => {
+    const { numero_quarto, num_max_hospedes } = req.body;
+
+    try {
+        const result = await pool.query(
+          'INSERT INTO quartos (numero_quarto, num_max_hospedes) VALUES ($1, $2) RETURNING *',
+          [numero_quarto, num_max_hospedes]
+        );
+        res.send(201, result.rows[0]);
+        console.log('Quarto registrado com sucesso:', result.rows[0]);
+    } catch (error) {
+        console.error('Erro ao registrar quarto:', error);
+        res.send(500, { message: 'Erro ao registrar quarto' });
+    }
+
+    return next();
+});
+
+server.get('/api/v1/quarto/listarQuartos', async  (req, res, next) => {
+    try {
+        const result = await pool.query('SELECT * FROM quartos');
+        res.send(result.rows);
+        console.log('Quartos encontrados:', result.rows);
+    } catch (error) {
+        console.error('Erro ao listar quartos:', error);
+        res.send(500, { message: 'Erro ao listar quartos' });
+    }
+    
+      return next();
+});
+
+server.post('/api/v1/quarto/atualizarQuarto', async (req, res, next) => {
+    const { numero_quarto, num_max_hospedes, id } = req.body;
+
+    try {
+        const result = await pool.query(
+          'UPDATE quartos SET numero_quarto = $1, num_max_hospedes = $2 WHERE id = $3 RETURNING *',
+          [numero_quarto, num_max_hospedes, id]
+        );
+        if (result.rowCount === 0) {
+          res.send(404, { message: 'Quarto não encontrado' });
+        } else {
+          res.send(200, result.rows[0]);
+          console.log('Quarto atualizado com sucesso:', result.rows[0]);
+        }
+    } catch (error) {
+        console.error('Erro ao atualizar quarto:', error);
+        res.send(500, { message: 'Erro ao atualizar quarto' });
+    }
+
+    return next();
+});
+
+server.post('/api/v1/quarto/excluirQuarto', async (req, res, next) => {
+    const { id } = req.body;
+
+    try {
+        const result = await pool.query('DELETE FROM quartos WHERE id = $1', [id]);
+        if (result.rowCount === 0) {
+          res.send(404, { message: 'Quarto não encontrado' });
+        } else {
+          res.send(200, { message: 'Quarto deletado com sucesso' });
+          console.log('Quarto deletado com sucesso');
+        }
+    } catch (error) {
+        console.error('Erro ao deletar quarto:', error);
+        res.send(500, { message: 'Erro ao deletar quarto' });
+    }
+
+    return next();
+});
+
+server.post('/api/v1/reserva/checarQuartoDisponivel', async (req, res, next) => {
+    const { numero_quarto, num_hospedes, data_entrada, data_saida } = req.body;
+
+    try {
+        let quartoSelecionado = await pool.query(
+          'SELECT * FROM quartos WHERE numero_quarto = $1',
+          [numero_quarto]
+        );
+
+        if (quartoSelecionado.rows[0].num_max_hospedes < num_hospedes) {
+            const erro = new Error('O quarto selecionado não comporta o número de hospedes.');
+            throw erro;
+        }
+
+        let quartoReservado = await pool.query(`
+            SELECT * 
+            FROM reservas 
+            WHERE numero_quarto = $1 
+            AND (
+                (data_entrada <= $2 AND data_saida > $2) OR 
+                (data_entrada < $3 AND data_saida >= $3) OR
+                (data_entrada >= $2 AND data_saida <= $3)
+            )
+            `,
+            [numQuarto, data_entrada, data_saida]
+        );
+
+        if (quartoReservado.rows && quartoReservado.rows.length) {
+            const erro = new Error('O quarto selecionado não está diponível para a data selecionada.');
+            throw erro;
+        }
+    } catch (error) {
+        console.error('Erro ao verificar disponibilidade do quarto:', error);
+        res.send(500, { message: 'Erro ao verificar disponibilidade do quarto' });
+    }
+
+    return next();
+});
+
 // endpoint para resetar o banco de dados
 server.del('/api/v1/database/reset', async (req, res, next) => {
     try {
-      await pool.query('DROP TABLE IF EXISTS reservas');
-      await pool.query('CREATE TABLE IF NOT EXISTS reservas (id SERIAL PRIMARY KEY, nomehospede VARCHAR(255) NOT NULL, dataentrada DATE NOT NULL, datasaida DATE NOT NULL, numeroquarto INT NOT NULL)');
+        await pool.query('DROP TABLE IF EXISTS reservas');
+        await pool.query('DROP TABLE IF EXISTS quartos');
+        await pool.query('CREATE TABLE IF NOT EXISTS reservas (id SERIAL PRIMARY KEY, nome_hospede VARCHAR(255) NOT NULL, cpf_hospede VARCHAR(255) NOT NULL, num_hospedes VARCHAR(255) NOT NULL, data_entrada DATE NOT NULL, data_saida DATE NOT NULL, numero_quarto VARCHAR(255) NOT NULL)');
+        await pool.query('CREATE TABLE IF NOT EXISTS quartos (id SERIAL PRIMARY KEY, numero_quarto VARCHAR(255) NOT NULL, num_max_hospedes VARCHAR(255) NOT NULL)');
+      
+        await pool.query(`
+            INSERT INTO quartos (numero_quarto, num_max_hospedes)
+            VALUES 
+            ('101A', '2'),
+            ('102A', '2'),
+            ('103A', '2'),
+            ('201A', '3'),
+            ('202A', '3'),
+            ('203A', '4'),
+            ('301A', '4'),
+            ('302A', '4'),
+            ('303A', '4')
+        `);
+
       res.send(200, { message: 'Banco de dados resetado com sucesso' });
       console.log('Banco de dados resetado com sucesso');
     } catch (error) {

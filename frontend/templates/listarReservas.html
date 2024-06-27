@@ -3,16 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Home</title>
+    <title>Listar Reservas</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <style>
-        .content {
+        .form-heading {
             text-align: center;
+            font-size: 1.5rem;
             margin-top: 20px;
-        }
-        .content p {
-            font-size: 1.2rem;
-            margin-top: 40px;
+            margin-bottom: 20px;
         }
     </style>
 </head>
@@ -30,8 +28,7 @@
                   Gerenciamento de Reservas
                 </a>
                 <ul class="dropdown-menu">
-                  <li><a class="nav-link" href="/cadastrarReserva">Cadastrar Reserva</a></li>
-                  <li><a class="nav-link" href="/listarReservas">Listar Reservas</a></li>
+                    <li><a class="nav-link" href="/cadastrarReserva">Cadastrar Reserva</a></li>
                 </ul>
             </li>
             <li class="nav-item dropdown">
@@ -55,10 +52,44 @@
         </div>
         </div>
     </nav>
-    <div class="container content">
-        <h1 class="mt-5">Sistema para gerenciamento de reservas de um hotel</h1>
-        <p>Este é um sistema de gerenciamento de reservas, você pode cadastrar, listar, atualizar e excluir reservas.</p>
-        <p>Além disso, é possível cadastrar, listar, atualizar e excluir os quartos disponíveis no hotel.</p>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    {% if reservas %}
+    <p class="form-heading">Reservas cadastradas no sistema:</p>
+    <table border="1" class="table table-striped">
+        <thead>
+            <tr>
+                <th>Nome do Hóspede</th>
+                <th>CPF do Hóspede</th>
+                <th>Número de Hóspedes</th>
+                <th>Data do Checkin</th>
+                <th>Data do Checkout</th>
+                <th>Número do quarto</th>
+                <th>Ação</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for reserva in reservas %}
+            <tr>
+                <td>{{ reserva.nome_hospede }}</td>
+                <td>{{ reserva.cpf_hospede }}</td>
+                <td>{{ reserva.num_hospedes }}</td>
+                <td>{{ reserva.data_entrada | converterDataParaDDMMAAAA }}</td>
+                <td>{{ reserva.data_saida | converterDataParaDDMMAAAA }}</td>
+                <td>{{ reserva.numero_quarto }}</td>
+                <td class="d-flex">
+                    <form action="/excluirReserva/{{ reserva.id }}" method="POST" style="margin-right: 10px;">
+                        <input type="submit" value="Excluir" class="btn btn-outline-danger">
+                    </form>
+                    <form action="/atualizarReserva/{{ reserva.id }}" method="GET">
+                        <input type="submit" value="Atualizar" class="btn btn-outline-primary">
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="form-heading">Nenhuma reserva encontrada.</p>
+    {% endif %}
 </body>
 </html>

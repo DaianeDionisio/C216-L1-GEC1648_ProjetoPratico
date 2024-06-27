@@ -37,6 +37,7 @@ services:
       - backend
     environment:
       API_BASE_URL: http://backend:5000/api/v1/reserva
+      API_BASE_URL_QUARTO: http://backend:5000/api/v1/quarto
       API_DATABASE_RESET: http://backend:5000/api/v1/database/reset
 volumes:
   db_data:
