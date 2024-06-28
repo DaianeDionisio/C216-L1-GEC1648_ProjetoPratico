@@ -10,7 +10,7 @@
 </h4>
 
 <h4 align="center">
-<img src="https://icons8.com.br/icon/UUBmfNBP4ocf/5-star-hotel"/>
+<img src="https://img.icons8.com/?size=100&id=12350&format=png&color=000000"/>
 </h4>
 
 <p align="center">
