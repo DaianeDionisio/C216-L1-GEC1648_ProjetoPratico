@@ -197,40 +197,64 @@ server.post('/api/v1/quarto/excluirQuarto', async (req, res, next) => {
     return next();
 });
 
-server.post('/api/v1/reserva/checarQuartoDisponivel', async (req, res, next) => {
-    const { numero_quarto, num_hospedes, data_entrada, data_saida } = req.body;
+server.post('/api/v1/reserva/buscarQuartosDisponiveis', async (req, res, next) => {
+    const { num_hospedes, data_entrada, data_saida, id } = req.body;
 
     try {
-        let quartoSelecionado = await pool.query(
-          'SELECT * FROM quartos WHERE numero_quarto = $1',
-          [numero_quarto]
+        let quartosQueCorrespondemAoNumeroDeHospedes = await pool.query(
+          'SELECT * FROM quartos WHERE num_max_hospedes >= $1',
+          [num_hospedes]
         );
 
-        if (quartoSelecionado.rows[0].num_max_hospedes < num_hospedes) {
-            const erro = new Error('O quarto selecionado não comporta o número de hospedes.');
-            throw erro;
-        }
+        let quartosDisponiveis = [];
 
-        let quartoReservado = await pool.query(`
-            SELECT * 
-            FROM reservas 
-            WHERE numero_quarto = $1 
-            AND (
-                (data_entrada <= $2 AND data_saida > $2) OR 
-                (data_entrada < $3 AND data_saida >= $3) OR
-                (data_entrada >= $2 AND data_saida <= $3)
-            )
-            `,
-            [numQuarto, data_entrada, data_saida]
-        );
+        await Promise.all(quartosQueCorrespondemAoNumeroDeHospedes.rows.map(async quarto => {
+            const numero_quarto = quarto.numero_quarto;
 
-        if (quartoReservado.rows && quartoReservado.rows.length) {
-            const erro = new Error('O quarto selecionado não está diponível para a data selecionada.');
-            throw erro;
-        }
+            try {
+                // Verifica se há reservas que ocupam o quarto nas datas solicitadas
+                let result;
+                if (id) {
+                    result = await pool.query(`
+                        SELECT *
+                        FROM reservas
+                        WHERE numero_quarto = $1
+                        AND (
+                            (data_entrada <= $2 AND data_saida > $2) OR
+                            (data_entrada < $3 AND data_saida >= $3) OR
+                            (data_entrada >= $2 AND data_saida <= $3)
+                        ) AND id != $4
+                    `,
+                    [numero_quarto, data_entrada, data_saida, id]);
+                } else {
+                    result = await pool.query(`
+                        SELECT *
+                        FROM reservas
+                        WHERE numero_quarto = $1
+                        AND (
+                            (data_entrada <= $2 AND data_saida > $2) OR
+                            (data_entrada < $3 AND data_saida >= $3) OR
+                            (data_entrada >= $2 AND data_saida <= $3)
+                        )
+                    `,
+                    [numero_quarto, data_entrada, data_saida]);
+                }
+
+                // Se não houver reservas que ocupem o quarto nas datas solicitadas, adiciona à lista de quartos disponíveis
+                if (result.rows.length === 0) {
+                    quartosDisponiveis.push(numero_quarto);
+                }
+            } catch (error) {
+                console.error(`Erro ao verificar disponibilidade do quarto ${numero_quarto}:`, error);
+                throw error; // Lança o erro para ser capturado pelo bloco catch externo
+            }
+        }));
+
+        res.send(200,quartosDisponiveis); // Retorna a lista de quartos disponíveis como um array simples
+        console.log('Quartos disponíveis:', quartosDisponiveis);
     } catch (error) {
-        console.error('Erro ao verificar disponibilidade do quarto:', error);
-        res.send(500, { message: 'Erro ao verificar disponibilidade do quarto' });
+        console.error('Erro ao buscar quartos disponíveis:', error);
+        res.send(500, { message: 'Erro ao buscar quartos disponíveis' });
     }
 
     return next();

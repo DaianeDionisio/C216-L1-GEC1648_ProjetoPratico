@@ -54,9 +54,6 @@ def cadastrar_reserva():
         'numero_quarto': numero_quarto
     }
 
-    # Checar se quarto está disponível e se correspondente ao número de hospedes
-    requests.post(f'{API_BASE_URL}/checarQuartoDisponivel', json=payload)
-
     response = requests.post(f'{API_BASE_URL}/cadastrarReserva', json=payload)
     
     if response.status_code == 201:
@@ -193,27 +190,6 @@ def excluir_quarto(quarto_id):
     else:
         return "Erro ao excluir quarto", 500
 
-# Rota para buscar quartos disponiveis
-@app.route('/buscarQuartosDisponiveis', methods=['POST'])
-def buscar_quarto_disponivel():
-    num_hospedes = request.form['num_hospedes']
-    data_entrada = request.form['data_entrada']
-    data_saida = request.form['data_saida']
-
-    payload = {
-        'num_hospedes': num_hospedes,
-        'data_entrada': data_entrada,
-        'data_saida': data_saida
-    }
-
-    response = requests.post(f'{API_BASE_URL}/buscarQuartosDisponiveis', json=payload)
-    
-    if response.status_code == 201:
-        return response
-    else:
-        return "Erro ao buscar quartos disponíveis", 500
-    
-
 #Rota para resetar o database
 @app.route('/reset-database', methods=['GET'])
 def resetar_database():
@@ -223,6 +199,30 @@ def resetar_database():
         return redirect(url_for('index'))
     else:
         return "Erro ao resetar o database", 500
+
+@app.route('/buscarQuartosDisponiveis', methods=['POST'])
+@app.route('/buscarQuartosDisponiveis/<int:reserva_id>', methods=['POST'])
+def buscarQuartosDisponiveis(reserva_id=None):
+    num_hospedes = request.form['num_hospedes']
+    data_entrada = request.form['data_entrada']
+    data_saida = request.form['data_saida']
+
+    payload = {
+        'num_hospedes': num_hospedes,
+        'data_entrada': data_entrada,
+        'data_saida': data_saida,
+    }
+
+    if reserva_id is not None:
+        payload['id'] = reserva_id
+
+    response = requests.post(f'{API_BASE_URL}/buscarQuartosDisponiveis', json=payload)
+
+    if response.status_code == 200:
+        quartos_disponiveis = response.json()
+        return quartos_disponiveis, 201
+    else:
+        return "Erro ao buscar quartos disponíveis", 500
 
 
 if __name__ == '__main__':

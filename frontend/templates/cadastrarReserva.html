@@ -16,7 +16,55 @@
             margin-top: 20px;
             margin-bottom: 20px;
         }
+        /* Estilo para aumentar o tamanho da fonte do select */
+        #numero_quarto {
+            font-size: 1.1rem; /* Ajuste o tamanho conforme necessário */
+        }
     </style>
+    <script>
+        function buscarQuartosDisponiveis() {
+            var numHospedes = document.getElementById('num_hospedes').value;
+            var dataEntrada = document.getElementById('data_entrada').value;
+            var dataSaida = document.getElementById('data_saida').value;
+
+            if (numHospedes && dataEntrada && dataSaida) {
+                var xhr = new XMLHttpRequest();
+                xhr.open('POST', '/buscarQuartosDisponiveis', true);
+                xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+
+                xhr.onload = function () {
+                    if (xhr.status === 201) {
+                        var quartos = JSON.parse(xhr.responseText);
+                        var selectQuartos = document.getElementById('numero_quarto');
+                        selectQuartos.innerHTML = ''; // Limpa as opções existentes
+
+                        // Adiciona a opção padrão
+                        var optionDefault = document.createElement('option');
+                        optionDefault.value = '';
+                        optionDefault.textContent = 'Selecione um quarto';
+                        selectQuartos.appendChild(optionDefault);
+
+                        // Adiciona as opções dos quartos disponíveis
+                        quartos.forEach(function (quarto) {
+                            var option = document.createElement('option');
+                            option.value = quarto;
+                            option.textContent = quarto;
+                            selectQuartos.appendChild(option);
+                        });
+                    } else {
+                        alert("Erro ao buscar quartos disponíveis");
+                    }
+                };
+
+                xhr.onerror = function () {
+                    console.error('Erro na requisição');
+                };
+
+                var params = 'num_hospedes=' + numHospedes + '&data_entrada=' + dataEntrada + '&data_saida=' + dataSaida;
+                xhr.send(params);
+            }
+        }
+    </script>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg bg-body-tertiary" data-bs-theme="dark">
@@ -65,13 +113,15 @@
             <label for="cpf_hospede" class="form-label">CPF do Hóspede:</label><br>
             <input type="text" id="cpf_hospede" name="cpf_hospede" class="form-control" required><br>
             <label for="num_hospedes" class="form-label">Número de Hóspedes:</label><br>
-            <input type="number" id="num_hospedes" name="num_hospedes" class="form-control" required><br>
+            <input type="number" id="num_hospedes" name="num_hospedes" class="form-control" required oninput="buscarQuartosDisponiveis()"><br>
             <label for="data_entrada" class="form-label">Data do Checkin:</label><br>
-            <input type="date" id="data_entrada" name="data_entrada" class="form-control" required><br>
+            <input type="date" id="data_entrada" name="data_entrada" class="form-control" required onchange="buscarQuartosDisponiveis()"><br>
             <label for="data_saida" class="form-label">Data do Checkout:</label><br>
-            <input type="date" id="data_saida" name="data_saida" class="form-control" required><br>
+            <input type="date" id="data_saida" name="data_saida" class="form-control" required onchange="buscarQuartosDisponiveis()"><br>
             <label for="numero_quarto" class="form-label">Número do quarto:</label><br>
-            <input type="text" id="numero_quarto" name="numero_quarto" class="form-control" required><br><br>
+            <select id="numero_quarto" name="numero_quarto" class="form-select form-select-sm" aria-label=".form-select-sm example" required>
+                <option value="">Selecione um quarto</option>
+            </select><br>
             <input type="submit" value="Cadastrar" class="btn btn-secondary" id="submitBtn">
         </form>
     </div>
